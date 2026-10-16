@@ -1,22 +1,15 @@
 import numpy as np
 
 
-# ============================================================
-# PERFORMANCE DEGRADATION
-# ============================================================
-
 def normalize_performance(baseline, current):
     """
-    Calculate performance degradation relative to G0.
+    Convert performance decrease relative to G0 into [0, 1].
 
-    Formula:
-        degradation = (baseline - current) / baseline
-
-    The result is clipped to [0, 1].
-
-    0 = no degradation or improvement
-    1 = complete degradation
+    Improvements are clipped to zero because the index measures degradation,
+    not improvement.
     """
+    if baseline < 0 or current < 0:
+        raise ValueError("Performance metrics cannot be negative.")
 
     if baseline == 0:
         return 0.0
@@ -28,38 +21,27 @@ def normalize_performance(baseline, current):
 
 def calculate_performance_index(
     baseline_metrics,
-    current_metrics
+    current_metrics,
 ):
-    """
-    Calculate the Performance Index (PI).
-
-    Accuracy, precision, recall and F1 are each
-    normalized relative to G0 and then averaged.
-
-    PI is therefore in the range [0, 1].
-
-    0 = no performance degradation
-    1 = maximum performance degradation
-    """
-
+    """Average normalized degradation of Accuracy, Precision, Recall and F1."""
     accuracy_degradation = normalize_performance(
         baseline_metrics["accuracy"],
-        current_metrics["accuracy"]
+        current_metrics["accuracy"],
     )
 
     precision_degradation = normalize_performance(
         baseline_metrics["precision"],
-        current_metrics["precision"]
+        current_metrics["precision"],
     )
 
     recall_degradation = normalize_performance(
         baseline_metrics["recall"],
-        current_metrics["recall"]
+        current_metrics["recall"],
     )
 
     f1_degradation = normalize_performance(
         baseline_metrics["f1"],
-        current_metrics["f1"]
+        current_metrics["f1"],
     )
 
     performance_index = (
@@ -72,53 +54,27 @@ def calculate_performance_index(
     return float(performance_index)
 
 
-# ============================================================
-# DISTRIBUTION DEGRADATION
-# ============================================================
-
 def normalize_wasserstein(wasserstein_value):
     """
-    Convert Wasserstein distance into a bounded [0, 1)
-    degradation score.
-
-    Formula:
-        W_norm = W / (1 + W)
-
-    The transformation is monotonic, so larger
-    Wasserstein distances always produce larger
-    normalized degradation values.
+    Bound a non-negative Wasserstein distance to [0, 1] using x / (1 + x).
     """
-
     if wasserstein_value < 0:
-        raise ValueError(
-            "Wasserstein distance cannot be negative."
-        )
+        raise ValueError("Wasserstein distance cannot be negative.")
 
     return float(
         wasserstein_value / (1.0 + wasserstein_value)
     )
 
 
-def normalize_diversity(
-    real_diversity,
-    synthetic_diversity
-):
+def normalize_diversity(real_diversity, synthetic_diversity):
     """
-    Calculate diversity degradation relative to
-    the original real training data.
+    Measure diversity loss relative to the original real-data baseline.
 
-    Formula:
-        degradation =
-            (real_diversity - synthetic_diversity)
-            / real_diversity
-
-    Only a reduction in diversity is treated as
-    degradation. The result is clipped to [0, 1].
-
-    0 = synthetic data is equally or more diverse
-        than the real reference
-    1 = maximum diversity degradation
+    Synthetic diversity above the baseline is not treated as negative
+    degradation. The lower bound is zero.
     """
+    if real_diversity < 0 or synthetic_diversity < 0:
+        raise ValueError("Diversity values cannot be negative.")
 
     if real_diversity == 0:
         return 0.0
@@ -133,15 +89,16 @@ def normalize_diversity(
 
 
 def normalize_class_balance(class_balance_difference):
-    """
-    Total Variation Distance is already bounded
-    between 0 and 1.
-
-    Therefore it is used directly.
-    """
+    """Keep class-distribution deviation in its natural [0, 1] range."""
+    if class_balance_difference < 0:
+        raise ValueError("Class distribution difference cannot be negative.")
 
     return float(
-        np.clip(class_balance_difference, 0.0, 1.0)
+        np.clip(
+            class_balance_difference,
+            0.0,
+            1.0,
+        )
     )
 
 
@@ -149,20 +106,9 @@ def calculate_distribution_index(
     wasserstein,
     class_balance_difference,
     real_diversity,
-    synthetic_diversity
+    synthetic_diversity,
 ):
-    """
-    Calculate the Distribution Index (DI).
-
-    The three distribution degradation metrics are
-    normalized separately and then averaged.
-
-    DI is therefore in the range [0, 1].
-
-    0 = no distribution degradation
-    1 = maximum distribution degradation
-    """
-
+    """Average the three normalized distribution degradation components."""
     wasserstein_degradation = normalize_wasserstein(
         wasserstein
     )
@@ -173,7 +119,7 @@ def calculate_distribution_index(
 
     diversity_degradation = normalize_diversity(
         real_diversity,
-        synthetic_diversity
+        synthetic_diversity,
     )
 
     distribution_index = (
@@ -185,34 +131,20 @@ def calculate_distribution_index(
     return float(distribution_index)
 
 
-# ============================================================
-# COLLAPSE INDEX
-# ============================================================
-
 def calculate_collapse_index(
     performance_index,
-    distribution_index
+    distribution_index,
 ):
-    """
-    Calculate the final Collapse Index.
-
-    Formula:
-        CI = 0.5 * PI + 0.5 * DI
-
-    The Performance and Distribution groups receive
-    equal weight.
-
-    CI is in the range [0, 1].
-
-    0 = no measured degradation
-    1 = maximum measured degradation
-    """
-
+    """Combine PI and DI with equal top-level weights."""
     collapse_index = (
         0.5 * performance_index
         + 0.5 * distribution_index
     )
 
     return float(
-        np.clip(collapse_index, 0.0, 1.0)
+        np.clip(
+            collapse_index,
+            0.0,
+            1.0,
+        )
     )

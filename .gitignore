@@ -1,39 +1,31 @@
-# Python
+# Python caches and environments
 __pycache__/
 *.py[cod]
-*.pyo
-
-# Virtual environment
+.pytest_cache/
 .venv/
-venv/
-env/
 
-# Environment / secrets
+# Secrets
 .env
 .env.*
 !.env.example
-
-# IDE
-.vscode/
-.idea/
-
-# Testing / cache
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Streamlit
 .streamlit/secrets.toml
 
-# OS
-.DS_Store
-Thumbs.db
+# Generated experiment outputs
+results/
+outputs/
+output/
 
-# Large/generated files
-*.pkl
+# Trained model artifacts
 *.joblib
-*.h5
+*.pkl
+*.pickle
 *.keras
+*.h5
+*.ckpt
+*.pt
+*.pth
 
-# Logs
-*.log
+# Temporary archives
+core.zip
+tests.zip
+testing_files.zip

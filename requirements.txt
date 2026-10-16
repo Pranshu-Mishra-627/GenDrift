@@ -1,0 +1,12 @@
+
+streamlit
+pandas
+numpy
+scikit-learn
+scipy
+sdv
+shap
+optuna
+tensorflow
+joblib
+pytest
